@@ -35,7 +35,9 @@ int Matrix [8] [8] = {
   {0, 0, 1, 0, 0, 0, 0, 0},
 };
 
-
+void clear(){
+  for (int i = 0; i < 8; i++) for (int j = 0; j < 8; j++) Matrix[i][j] = 0; //clearer
+}
 
 void setup() {
   pause = 1;
@@ -99,6 +101,8 @@ void Set_LED_in_Active_Row(int column, int state) {
 }
 
 void loop() {
+clear();
+  
 
 //stuff for showing pixels
   for (int j = 0; j < 8; j++) {
