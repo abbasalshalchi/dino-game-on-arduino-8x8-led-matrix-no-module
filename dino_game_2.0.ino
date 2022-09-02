@@ -23,7 +23,10 @@
 #define C7 A2
 #define C8 A3
 //_______________________________________ variables _______________________________________
+DinoSpeed;
+bool ButtonPressed;
 int pause;
+const int dinoJPat [6] = {2, 3, 3, 3, 2, 0};
 int Matrix [8] [8] = {
   {0, 1, 0, 0, 0, 0, 0, 0},
   {0, 0, 1, 0, 0, 0, 0, 0},
@@ -35,12 +38,26 @@ int Matrix [8] [8] = {
   {0, 0, 1, 0, 0, 0, 0, 0},
 };
 
-void clear(){
+void clear() {
   for (int i = 0; i < 8; i++) for (int j = 0; j < 8; j++) Matrix[i][j] = 0; //clearer
+}
+bool Cbutton() {
+  static unsigned short buttonFlag = 0;
+  if (digitalRead(A4) == HIGH && buttonFlag >= dinoSpeed * 6) {
+    buttonFlag = 0;
+    return 1;
+  } else {
+    if (buttonFlag < dinoSpeed * 6) {
+      buttonFlag++;
+    }
+    return 0;
+  }
 }
 
 void setup() {
+  dinoSpeed = 10;
   pause = 1;
+  pinMode(A4, INPUT);
   pinMode(R1, OUTPUT);
   pinMode(R2, OUTPUT);
   pinMode(R3, OUTPUT);
@@ -101,10 +118,13 @@ void Set_LED_in_Active_Row(int column, int state) {
 }
 
 void loop() {
-clear();
-  
+  clear();
+  if(Cbutton()){
+    //jump
+  }
 
-//stuff for showing pixels
+
+  //stuff for showing pixels
   for (int j = 0; j < 8; j++) {
     SelectRow(j + 1);
     for (int i = 0; i < 8; i++) {
@@ -113,5 +133,5 @@ clear();
     }
     delay(2 + pause);
   }
-  
+
 }
