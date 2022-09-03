@@ -24,34 +24,34 @@
 #define C8 A3
 //_______________________________________ variables _______________________________________
 short i = 0;//for dino
-int DinoSpeed;
+int DinoFrameLength;
 bool ButtonPressed;
 int pause;
 const int DinoJPat [6] = {2, 3, 3, 3, 2, 0};
 int Matrix [8] [8] = {
-  {0, 1, 0, 0, 0, 0, 0, 0},
-  {0, 0, 1, 0, 0, 0, 0, 0},
-  {0, 0, 0, 1, 0, 0, 0, 0},
-  {0, 0, 0, 0, 1, 0, 0, 0},
-  {0, 0, 0, 1, 0, 0, 0, 0},
-  {0, 0, 1, 0, 0, 0, 0, 0},
-  {0, 1, 0, 0, 0, 0, 0, 0},
-  {0, 0, 1, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
 };
 
 void clear() {
   for (int i = 0; i < 8; i++) for (int j = 0; j < 8; j++) Matrix[i][j] = 0; //clearer
 }
 bool Cbutton() {
-  static unsigned short buttonFlag = DinoSpeed * 6;
-  if (digitalRead(A4) == HIGH && buttonFlag >= DinoSpeed * 6 - 1) {
+  static unsigned short buttonFlag = 6;
+  if (digitalRead(A4) == HIGH && buttonFlag >= 6 - 1) {
     buttonFlag = 0;
     return 1;
-  } else if (buttonFlag < DinoSpeed * 6 - 1) {
-      buttonFlag++;
-    }
-    return 0;
+  } else if (buttonFlag < 6 - 1) {
+    buttonFlag++;
   }
+  return 0;
+}
 
 //_______________________________________ classes _______________________________________
 class Mover {
@@ -65,33 +65,35 @@ class Mover {
       }
     }
   public:
-    void SetHight(int hight) {
+    void SetHight(int hight) {  //number of pixels/0 means nothing
       Hight = hight;
     }
-    void Tick() {
+    void Tick() {               //
       if (Available) {
-        if (Px < 7) {
-          Px++;
+        if (Px > 0) {
+          Px--;
         } else {
           Available = 0;
         }
       }
     }
-    void StillTick() {
+    void StillTick() {          //
       if (Available) {
         Show();
       }
     }
-    void MakeAvailable(){
+    void MakeAvailable() {      //
       Available = 1;
+      Px = 7;
     }
     Mover() {
       Available = 1;
+      Px = 7;
     }
 };
 class Dino {
     int dinoFrame = 5;
-    void Show(){
+    void Show() {
       Matrix[7 - DinoJPat[dinoFrame]][1] = 1;
       Matrix[6 - DinoJPat[dinoFrame]][1] = 1;
     }
@@ -116,11 +118,12 @@ class Dino {
     }
 };
 Dino dino;
-
+Mover mover;
 void setup() {
+  mover.SetHight(3);
   Serial.begin(9600);
-  DinoSpeed = 1;
-  pause = 1;
+  DinoFrameLength =1; //dino frame length(how many frames in one dino frame)
+  pause = 2000; //frame length in micros
   pinMode(A4, INPUT);
   pinMode(R1, OUTPUT);
   pinMode(R2, OUTPUT);
@@ -185,14 +188,17 @@ void loop() {
   clear();
   //dino.StillTick();
 
-  if (i < 5) {
+  if (i < DinoFrameLength) {
     i++;
     dino.StillTick();
+    mover.StillTick();
   } else {
     if (Cbutton()) {
       dino.Jump();
+      mover.Tick();
     } else {
       dino.Tick();
+      mover.Tick();
     }
     i = 0;
   }
@@ -204,7 +210,6 @@ void loop() {
       Set_LED_in_Active_Row(i + 1 , Matrix[j][i]);
 
     }
-    delay(2 + pause);
+    delayMicroseconds(pause);
   }
-
 }
