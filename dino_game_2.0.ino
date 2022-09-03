@@ -23,7 +23,7 @@
 #define C7 A2
 #define C8 A3
 //_______________________________________ variables _______________________________________
-  short i = 0;//for dino
+short i = 0;//for dino
 int DinoSpeed;
 bool ButtonPressed;
 int pause;
@@ -43,25 +43,62 @@ void clear() {
   for (int i = 0; i < 8; i++) for (int j = 0; j < 8; j++) Matrix[i][j] = 0; //clearer
 }
 bool Cbutton() {
-  static unsigned short buttonFlag = 0;
-  if (digitalRead(A4) == HIGH && buttonFlag >= DinoSpeed * 6) {
+  static unsigned short buttonFlag = DinoSpeed * 6;
+  if (digitalRead(A4) == HIGH && buttonFlag >= DinoSpeed * 6 - 1) {
     buttonFlag = 0;
     return 1;
-  } else {
-    if (buttonFlag < DinoSpeed * 6) {
+  } else if (buttonFlag < DinoSpeed * 6 - 1) {
       buttonFlag++;
     }
     return 0;
   }
-}
+
 //_______________________________________ classes _______________________________________
+class Mover {
+  private:
+    bool Available;
+    int Px;
+    int Hight;
+    void Show() {
+      for (int i = 0; i < Hight; i++) {
+        Matrix[7 - i][Px] = 1;
+      }
+    }
+  public:
+    void SetHight(int hight) {
+      Hight = hight;
+    }
+    void Tick() {
+      if (Available) {
+        if (Px < 7) {
+          Px++;
+        } else {
+          Available = 0;
+        }
+      }
+    }
+    void StillTick() {
+      if (Available) {
+        Show();
+      }
+    }
+    void MakeAvailable(){
+      Available = 1;
+    }
+    Mover() {
+      Available = 1;
+    }
+};
 class Dino {
-  int dinoFrame = 5;
+    int dinoFrame = 5;
+    void Show(){
+      Matrix[7 - DinoJPat[dinoFrame]][1] = 1;
+      Matrix[6 - DinoJPat[dinoFrame]][1] = 1;
+    }
   public:
     //wich frame of the jump the dino is in
     void Tick() {
-      Matrix[7 - DinoJPat[dinoFrame]][1] = 1;
-      Matrix[6 - DinoJPat[dinoFrame]][1] = 1;
+      Show();
       if (dinoFrame < 5)  {
         dinoFrame++;
       } else {
@@ -71,13 +108,11 @@ class Dino {
     }
     void Jump() {
       dinoFrame = 0;
-      Matrix[7 - DinoJPat[dinoFrame]][1] = 1;
-      Matrix[6 - DinoJPat[dinoFrame]][1] = 1;
+      Show();
       // dinoFrame++;
     }
     void StillTick() {
-      Matrix[7 - DinoJPat[dinoFrame]][1] = 1;
-      Matrix[6 - DinoJPat[dinoFrame]][1] = 1;
+      Show();
     }
 };
 Dino dino;
@@ -148,8 +183,8 @@ void Set_LED_in_Active_Row(int column, int state) {
 
 void loop() {
   clear();
-   //dino.StillTick();
-   
+  //dino.StillTick();
+
   if (i < 5) {
     i++;
     dino.StillTick();
