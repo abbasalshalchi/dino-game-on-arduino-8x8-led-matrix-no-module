@@ -23,7 +23,7 @@
 #define C7 A2
 #define C8 A3
 //_______________________________________ variables _______________________________________
-short i = 0;//for dino
+int MoverFrameLength;
 int DinoFrameLength;
 bool ButtonPressed;
 int pause;
@@ -119,11 +119,12 @@ class Dino {
 };
 Dino dino;
 Mover mover;
-void setup() {
-  mover.SetHight(3);
+void setup() {//_______________________setup()_______________________
   Serial.begin(9600);
-  DinoFrameLength =1; //dino frame length(how many frames in one dino frame)
-  pause = 2000; //frame length in micros
+  mover.SetHight(3);
+  MoverFrameLength = 40; //Mover frame length(how many frames in one Mover frame for all movers)
+  DinoFrameLength = 2; //dino frame length(how many frames in one dino frame)
+  pause = 1000; //frame length in micros
   pinMode(A4, INPUT);
   pinMode(R1, OUTPUT);
   pinMode(R2, OUTPUT);
@@ -185,26 +186,28 @@ void Set_LED_in_Active_Row(int column, int state) {
 }
 
 void loop() {
+  static unsigned short i = 0;//for dino controller
+  static unsigned short j = 0;//for mover controller
   clear();
-  //dino.StillTick();
-
-  if (i < DinoFrameLength) {
-    i++;
-    dino.StillTick();
+  if (j < MoverFrameLength) { //controls in what frames the Mover moves (mover controller)
     mover.StillTick();
+    j++;
+  } else {
+    mover.Tick();
+    j = 0;
+  }
+  if (i < DinoFrameLength) { //controls in what frames the dino moves or starts the jump animation (dino controller)
+    dino.StillTick();
+    i++;
   } else {
     if (Cbutton()) {
       dino.Jump();
-      mover.Tick();
     } else {
       dino.Tick();
-      mover.Tick();
     }
     i = 0;
   }
-
-  //stuff for showing pixels
-  for (int j = 0; j < 8; j++) {
+  for (int j = 0; j < 8; j++) {//stuff for showing pixels
     SelectRow(j + 1);
     for (int i = 0; i < 8; i++) {
       Set_LED_in_Active_Row(i + 1 , Matrix[j][i]);
