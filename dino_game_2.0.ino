@@ -82,12 +82,15 @@ class Mover {
         Show();
       }
     }
-    void MakeAvailable() {      //
+    void MakeAvailable() {      //available means on screen
       Available = 1;
       Px = 7;
     }
-    Mover() {
-      Available = 1;
+    bool IsAvailable() {        //
+      return Available;
+    }
+    Mover() {                   //
+      Available = 0;
       Px = 7;
     }
 };
@@ -118,12 +121,15 @@ class Dino {
     }
 };
 Dino dino;
-Mover mover;
+Mover mover[3];
 void setup() {//_______________________setup()_______________________
+  randomSeed(76786);
   Serial.begin(9600);
-  mover.SetHight(3);
+  mover[0].SetHight(2);
+  mover[1].SetHight(3);
+  mover[2].SetHight(4);
   MoverFrameLength = 40; //Mover frame length(how many frames in one Mover frame for all movers)
-  DinoFrameLength = 2; //dino frame length(how many frames in one dino frame)
+  DinoFrameLength = 10; //dino frame length(how many frames in one dino frame)
   pause = 1000; //frame length in micros
   pinMode(A4, INPUT);
   pinMode(R1, OUTPUT);
@@ -186,27 +192,49 @@ void Set_LED_in_Active_Row(int column, int state) {
 }
 
 void loop() {
-  static unsigned short i = 0;//for dino controller
-  static unsigned short j = 0;//for mover controller
+  static float MFLfloat = 40;//to store speed's original value
+  static unsigned short S = 10;//spawn speed increases when decreasing this
+  static unsigned short T = 0;//to swtch between frames
+  static unsigned short t = random(100);//for tests(seperating movers)
+  static unsigned short ii = 0;//for dino controller
+  static unsigned short jj = 0;//for mover controller
   clear();
-  if (j < MoverFrameLength) { //controls in what frames the Mover moves (mover controller)
-    mover.StillTick();
-    j++;
+  if (jj < MoverFrameLength) { //controls in what frames the Mover moves (mover controller)
+    for (int i = 0; i < 3; i++)mover[i].StillTick(); //for loop to loop all objects in object array
+    jj++;
   } else {
-    mover.Tick();
-    j = 0;
+    for (int i = 0; i < 3; i++)mover[i].Tick();
+    jj = 0;
   }
-  if (i < DinoFrameLength) { //controls in what frames the dino moves or starts the jump animation (dino controller)
+  if (ii < DinoFrameLength) { //controls in what frames the dino moves or starts the jump animation (dino controller)
     dino.StillTick();
-    i++;
+    ii++;
   } else {
     if (Cbutton()) {
       dino.Jump();
     } else {
       dino.Tick();
     }
-    i = 0;
+    ii = 0;
   }
+  ////////////
+  t++;
+  if (t > S) {
+    if (random(10) == 1){
+      if (!mover[T].IsAvailable()) {  //available means on screen
+        mover[T].MakeAvailable();
+        mover[T].SetHight(random(1, 4));
+      }
+    }
+    t = 0;
+    T++;
+    if (T > 2)T = 0;
+    S = MoverFrameLength / 4;
+    MFLfloat = MFLfloat - pow(MFLfloat,2)/100000;
+    MoverFrameLength = 3 + round(MFLfloat);
+  }
+
+
   for (int j = 0; j < 8; j++) {//stuff for showing pixels
     SelectRow(j + 1);
     for (int i = 0; i < 8; i++) {
