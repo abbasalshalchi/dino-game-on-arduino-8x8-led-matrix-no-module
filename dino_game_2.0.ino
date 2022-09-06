@@ -28,7 +28,17 @@ int DinoFrameLength;
 bool ButtonPressed;
 int pause;
 const int DinoJPat [6] = {2, 3, 3, 3, 2, 0};
-int Matrix [8] [8] = {
+int Matrix [8] [8] = {//for what is showed on the screen (pixels)
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+};
+int HitboxMatrix [8] [8] = {//for movers hitboxes
   {0, 0, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, 0, 0},
@@ -40,7 +50,8 @@ int Matrix [8] [8] = {
 };
 
 void clear() {
-  for (int i = 0; i < 8; i++) for (int j = 0; j < 8; j++) Matrix[i][j] = 0; //clearer
+  for (int i = 0; i < 8; i++) for (int j = 0; j < 8; j++) Matrix[i][j] = 0; //clearer for pixels
+  for (int i = 0; i < 8; i++) for (int j = 0; j < 8; j++) HitboxMatrix[i][j] = 0; //clearer for hitboxes
 }
 bool Cbutton() {
   static unsigned short buttonFlag = 6;
@@ -62,6 +73,7 @@ class Mover {
     void Show() {
       for (int i = 0; i < Hight; i++) {
         Matrix[7 - i][Px] = 1;
+        HitboxMatrix[7 - i][Px] = 1;
       }
     }
   public:
@@ -95,13 +107,17 @@ class Mover {
     }
 };
 class Dino {
-    int dinoFrame = 5;
+    int dinoFrame;
     void Show() {
       Matrix[7 - DinoJPat[dinoFrame]][1] = 1;
       Matrix[6 - DinoJPat[dinoFrame]][1] = 1;
+      if (HitboxMatrix[7 - DinoJPat[dinoFrame]][1] == 1 || HitboxMatrix[6 - DinoJPat[dinoFrame]][1] == 1) {
+        DinoAlive = 0;
+      }
     }
   public:
     //wich frame of the jump the dino is in
+    bool DinoAlive;
     void Tick() {
       Show();
       if (dinoFrame < 5)  {
@@ -109,7 +125,6 @@ class Dino {
       } else {
         dinoFrame = 5;
       }
-      Serial.print(dinoFrame);
     }
     void Jump() {
       dinoFrame = 0;
@@ -118,6 +133,10 @@ class Dino {
     }
     void StillTick() {
       Show();
+    }
+    Dino() {
+      dinoFrame = 5;
+      DinoAlive = 1;
     }
 };
 Dino dino;
@@ -192,6 +211,15 @@ void Set_LED_in_Active_Row(int column, int state) {
 }
 
 void loop() {
+  const static int EndScreen [8] [8] = {//for what is showed on the screen (pixels)
+  {0, 0, 0, 0, 1, 1, 1, 0},
+  {0, 0, 0, 1, 0, 1, 1, 1},
+  {0, 0, 0, 1, 1, 1, 1, 1},
+  {1, 0, 1, 1, 1, 1, 0, 0},
+  {1, 1, 1, 1, 1, 1, 0, 0},
+  {0, 1, 1, 1, 1, 0, 0, 0},
+  {0, 0, 1, 0, 1, 0, 0, 0},
+  {0, 0, 1, 0, 0, 1, 0, 0},};
   static float MFLfloat = 40;//to store speed's original value
   static unsigned short S = 10;//spawn speed increases when decreasing this
   static unsigned short T = 0;//to swtch between frames
@@ -199,12 +227,23 @@ void loop() {
   static unsigned short ii = 0;//for dino controller
   static unsigned short jj = 0;//for mover controller
   clear();
+  dino.DinoAlive = 0;
+  if(dino.DinoAlive){
   if (jj < MoverFrameLength) { //controls in what frames the Mover moves (mover controller)
     for (int i = 0; i < 3; i++)mover[i].StillTick(); //for loop to loop all objects in object array
     jj++;
   } else {
     for (int i = 0; i < 3; i++)mover[i].Tick();
     jj = 0;
+    ////////////////////////////////////////////
+    ////////////////////////////////////////////
+    if (dino.DinoAlive) {
+      Serial.println("alive");
+    } else {
+      Serial.println("dead");
+    }
+    ////////////////////////////////////////////
+    ////////////////////////////////////////////
   }
   if (ii < DinoFrameLength) { //controls in what frames the dino moves or starts the jump animation (dino controller)
     dino.StillTick();
@@ -219,8 +258,8 @@ void loop() {
   }
   ////////////
   t++;
-  if (t > S) {
-    if (random(10) == 1){
+  if (t > S) {                                  //spawning movers stuff
+    if (random(10) == 1) {
       if (!mover[T].IsAvailable()) {  //available means on screen
         mover[T].MakeAvailable();
         mover[T].SetHight(random(1, 4));
@@ -230,12 +269,14 @@ void loop() {
     T++;
     if (T > 2)T = 0;
     S = MoverFrameLength / 4;
-    MFLfloat = MFLfloat - pow(MFLfloat,2)/100000;
+    MFLfloat = MFLfloat - pow(MFLfloat, 2) / 100000;
     MoverFrameLength = 3 + round(MFLfloat);
   }
+  }else{
+    for(int i=0;i<8;i++)for(int j = 0;j<8;j++)Matrix[i][j] = EndScreen[i][j];
+  }
 
-
-  for (int j = 0; j < 8; j++) {//stuff for showing pixels
+  for (int j = 0; j < 8; j++) {                   //stuff for showing pixels
     SelectRow(j + 1);
     for (int i = 0; i < 8; i++) {
       Set_LED_in_Active_Row(i + 1 , Matrix[j][i]);
