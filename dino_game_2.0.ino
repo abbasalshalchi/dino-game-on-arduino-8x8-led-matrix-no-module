@@ -27,7 +27,7 @@ int MoverFrameLength;
 int DinoFrameLength;
 bool ButtonPressed;
 int pause;
-const int DinoJPat [6] = {2, 3, 3, 3, 2, 0};
+const int DinoJPat [9] = {2, 3, 3, 3, 3, 3, 3, 2, 0};
 int Matrix [8] [8] = {//for what is showed on the screen (pixels)
   {0, 0, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, 0, 0},
@@ -53,17 +53,6 @@ void clear() {
   for (int i = 0; i < 8; i++) for (int j = 0; j < 8; j++) Matrix[i][j] = 0; //clearer for pixels
   for (int i = 0; i < 8; i++) for (int j = 0; j < 8; j++) HitboxMatrix[i][j] = 0; //clearer for hitboxes
 }
-bool Cbutton() {
-  static unsigned short buttonFlag = 6;
-  if (digitalRead(A4) == HIGH && buttonFlag >= 6 - 1) {
-    buttonFlag = 0;
-    return 1;
-  } else if (buttonFlag < 6 - 1) {
-    buttonFlag++;
-  }
-  return 0;
-}
-
 //_______________________________________ classes _______________________________________
 class Mover {
   private:
@@ -107,7 +96,6 @@ class Mover {
     }
 };
 class Dino {
-    int dinoFrame;
     void Show() {
       Matrix[7 - DinoJPat[dinoFrame]][1] = 1;
       Matrix[6 - DinoJPat[dinoFrame]][1] = 1;
@@ -117,14 +105,14 @@ class Dino {
     }
   public:
     //wich frame of the jump the dino is in
+    int dinoFrame;
     bool DinoAlive;
     void Tick() {
       Show();
-      if (dinoFrame < 5)  {
+      if (dinoFrame < 8)  {
         dinoFrame++;
-      } else {
-        dinoFrame = 5;
-      }
+        if(dinoFrame < 7 && dinoFrame > 1 && digitalRead(A4) == LOW)dinoFrame = 7;
+      } 
     }
     void Jump() {
       dinoFrame = 0;
@@ -135,12 +123,24 @@ class Dino {
       Show();
     }
     Dino() {
-      dinoFrame = 5;
+      dinoFrame = 8;
       DinoAlive = 1;
     }
 };
 Dino dino;
 Mover mover[3];
+//check button with cooldown
+bool Cbutton() {
+  static unsigned short buttonFlag = 9;
+  if(dino.dinoFrame == 8 && buttonFlag < 8)buttonFlag = 9;
+  if (digitalRead(A4) == HIGH && buttonFlag >= 8) {
+    buttonFlag = 0;
+    return 1;
+  } else if (buttonFlag < 8) {
+    buttonFlag++;
+  }
+  return 0;
+}
 void setup() {//_______________________setup()_______________________
   randomSeed(76786);
   Serial.begin(9600);
@@ -148,7 +148,7 @@ void setup() {//_______________________setup()_______________________
   mover[1].SetHight(3);
   mover[2].SetHight(4);
   MoverFrameLength = 40; //Mover frame length(how many frames in one Mover frame for all movers)
-  DinoFrameLength = 10; //dino frame length(how many frames in one dino frame)
+  DinoFrameLength = 14; //dino frame length(how many frames in one dino frame)
   pause = 1000; //frame length in micros
   pinMode(A4, INPUT);
   pinMode(R1, OUTPUT);
@@ -227,7 +227,6 @@ void loop() {
   static unsigned short ii = 0;//for dino controller
   static unsigned short jj = 0;//for mover controller
   clear();
-  dino.DinoAlive = 0;
   if(dino.DinoAlive){
   if (jj < MoverFrameLength) { //controls in what frames the Mover moves (mover controller)
     for (int i = 0; i < 3; i++)mover[i].StillTick(); //for loop to loop all objects in object array
@@ -269,11 +268,12 @@ void loop() {
     T++;
     if (T > 2)T = 0;
     S = MoverFrameLength / 4;
-    MFLfloat = MFLfloat - pow(MFLfloat, 2) / 100000;
-    MoverFrameLength = 3 + round(MFLfloat);
+    MFLfloat = MFLfloat - pow(MFLfloat, 2) / 50000;
+    MoverFrameLength = 2 + round(MFLfloat);
   }
   }else{
     for(int i=0;i<8;i++)for(int j = 0;j<8;j++)Matrix[i][j] = EndScreen[i][j];
+    //if(Cbutton())dino.DinoAlive = 1;
   }
 
   for (int j = 0; j < 8; j++) {                   //stuff for showing pixels
