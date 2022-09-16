@@ -34,7 +34,7 @@ bool Matrix [8] [8] = {
   {0, 0, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, 0, 0},
 };
-bool LostMatrix [8] [8] = {
+const bool LostMatrix [8] [8] = {
   {1, 1, 1, 1, 1, 1, 1, 1},
   {1, 0, 1, 1, 1, 1, 0, 1},
   {1, 1, 0, 1, 1, 0, 1, 1},
@@ -114,7 +114,7 @@ class Button {
         buttonFlag = 0;
         return 1;
       } else {
-        if (ReadValue > 10) {
+        if (ReadValue > 20) {
           buttonFlag = 1;
         }
         return 0;
@@ -138,7 +138,7 @@ class Block {
     }
     void RowChecking() {
       for (int i = 0; i < 8; i++) {
-          for (int j = 0; j < 8; j++)if (StillMatrix[9 - i][j + 1] == 0) j = 8; else if (j == 7) {
+          for (int j = 0; j < 8; j++)if (!StillMatrix[9 - i][j + 1]) j = 8; else if (j == 7) {
             for (int l = 0; l < 8; l++)StillMatrix[9 - i][l + 1] = 0;
             for (int m = i + 1; m < 9; m++)for (int n = 0; n < 9; n++)StillMatrix[10 - m][n] = StillMatrix[9 - m][n];
             i = -1;
@@ -149,12 +149,12 @@ class Block {
 
     void VerifyBlock() { //verify if should be killed
       if (Py >= 0) {   //avoid spawnkill
-        for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1)if (StillMatrix[Py + i + 3][Px + j + 1] == 1) {
-                for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1) StillMatrix[i + Py + 2][j + Px + 1] = 1;
+        for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j])if (StillMatrix[Py + i + 3][Px + j + 1]) {
+                for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j]) StillMatrix[i + Py + 2][j + Px + 1] = 1;
                 Px = 2;
                 Py = -1;
-                VerifyLose();
                 SetBlockMap(blockmapout[random(7)]);
+                VerifyLose();
               }
         RowChecking();
         VerifyLose();
@@ -166,7 +166,7 @@ class Block {
     void FallShow() {
       int l = Py;
       while (l < 8) {
-        for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1)if (StillMatrix[l + i + 3][Px + j + 1] == 1) {
+        for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j])if (StillMatrix[l + i + 3][Px + j + 1]) {
                 VerifyBlock();
                 return;
               }
@@ -175,21 +175,21 @@ class Block {
       }
     }
     void LeftShow() {
-      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1)if (StillMatrix[Py + i + 2][Px + j] == 1)return; Px--;
+      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j])if (StillMatrix[Py + i + 2][Px + j])return; Px--;
     }
     void RightShow() {
-      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1)if (StillMatrix[Py + i + 2][Px + j + 2] == 1)return; Px++;
+      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j])if (StillMatrix[Py + i + 2][Px + j + 2])return; Px++;
     }
     void SpinShow() {
       for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)TempBlockMap[i][j] = BlockMap[i][j];
       for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)BlockMap[i][j] = TempBlockMap[j][3 - i];
     }
     void StillShow() {
-      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1) Matrix[i + Py][j + Px] = 1;
-      for (int i = 0; i < 8; i++)for (int j = 0; j < 8; j++)if (StillMatrix[i + 2][j + 1] == 1) Matrix[i][j] = 1;
+      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j]) Matrix[i + Py][j + Px] = 1;
+      for (int i = 0; i < 8; i++)for (int j = 0; j < 8; j++)if (StillMatrix[i + 2][j + 1]) Matrix[i][j] = 1;
     }
     void GShow() {
-      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1)if (StillMatrix[Py + i + 3][Px + j + 1] == 1) {
+      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j])if (StillMatrix[Py + i + 3][Px + j + 1]) {
               VerifyBlock();
               return;
             }
@@ -320,7 +320,12 @@ void loop() {
         if (lostBlinkFlag > lostBlinkDuration - 1)lostBlinkFlag = 0;
         StillMatrix[i + 2][j + 1] = 0;
       }
-    if (DownStick.CButton())Lost = 0;
+    if (DownStick.CButton()){
+      Lost = 0;
+      block.~Block();
+      Block block(blockmapout[1]);
+      Clear();
+    }
   }
   for (int j = 0; j < 8; j++) {//stuff for showing
     SelectRow(j + 1);
