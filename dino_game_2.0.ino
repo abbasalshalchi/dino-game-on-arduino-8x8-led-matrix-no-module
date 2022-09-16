@@ -1,6 +1,3 @@
-//          ||
-//crediting\||/
-//          \/
 // Mario's ideas
 // Displaying cat image on 8x8 LED Matrix (Multiplexing)
 
@@ -22,13 +19,12 @@
 #define C6 A1
 #define C7 A2
 #define C8 A3
-//_______________________________________ variables _______________________________________
-int MoverFrameLength;
-int DinoFrameLength;
-bool ButtonPressed;
-int pause;
-const int DinoJPat [9] = {2, 3, 3, 3, 3, 3, 3, 2, 0};
-int Matrix [8] [8] = {//for what is showed on the screen (pixels)
+//____________________________________________variables____________________________________________
+int FrameFlag;
+bool Lost;
+/*const*/ int FrameFlagLimit = 100;
+int pause = 2000; //in micros
+bool Matrix [8] [8] = {
   {0, 0, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, 0, 0},
@@ -38,119 +34,184 @@ int Matrix [8] [8] = {//for what is showed on the screen (pixels)
   {0, 0, 0, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, 0, 0},
 };
-int HitboxMatrix [8] [8] = {//for movers hitboxes
-  {0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0},
+bool LostMatrix [8] [8] = {
+  {1, 1, 1, 1, 1, 1, 1, 1},
+  {1, 0, 1, 1, 1, 1, 0, 1},
+  {1, 1, 0, 1, 1, 0, 1, 1},
+  {1, 1, 1, 0, 0, 1, 1, 1},
+  {1, 1, 1, 0, 0, 1, 1, 1},
+  {1, 1, 0, 1, 1, 0, 1, 1},
+  {1, 0, 1, 1, 1, 1, 0, 1},
+  {1, 1, 1, 1, 1, 1, 1, 1},
+};
+bool StillMatrix [11] [10] = {
+  {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+  {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+  {0, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+};
+bool blockmapout[7][4][4] = {{
+    {0, 0, 0, 0},
+    {0, 1, 1, 1},
+    {0, 0, 1, 0},
+    {0, 0, 0, 0}
+  }, {
+    {0, 0, 1, 0},
+    {0, 0, 1, 0},
+    {0, 1, 1, 0},
+    {0, 0, 0, 0}
+  }, {
+    {0, 0, 0, 0},
+    {0, 1, 1, 0},
+    {0, 0, 1, 1},
+    {0, 0, 0, 0}
+  }, {
+    {0, 0, 0, 0},
+    {0, 1, 1, 0},
+    {0, 1, 1, 0},
+    {0, 0, 0, 0}
+  }, {
+    {0, 0, 0, 0},
+    {0, 0, 1, 1},
+    {0, 1, 1, 0},
+    {0, 0, 0, 0}
+  }, {
+    {0, 0, 1, 0},
+    {0, 0, 1, 0},
+    {0, 0, 1, 1},
+    {0, 0, 0, 0}
+  }, {
+    {0, 0, 1, 0},
+    {0, 0, 1, 0},
+    {0, 0, 1, 0},
+    {0, 0, 1, 0}
+  }
 };
 
-void clear() {
+void Clear() {               //clearer
   for (int i = 0; i < 8; i++) for (int j = 0; j < 8; j++) Matrix[i][j] = 0; //clearer for pixels
-  for (int i = 0; i < 8; i++) for (int j = 0; j < 8; j++) HitboxMatrix[i][j] = 0; //clearer for hitboxes
 }
-//_______________________________________ classes _______________________________________
-class Mover {
+//________________________________classes________________________________
+class Button {
   private:
-    bool Available;
-    int Px;
-    int Hight;
-    void Show() {
-      for (int i = 0; i < Hight; i++) {
-        Matrix[7 - i][Px] = 1;
-        HitboxMatrix[7 - i][Px] = 1;
-      }
-    }
+    bool preRead;
+    bool buttonFlag; //0 when clicked, 1 when unpressed
+    bool Reverse;// reverse read value
+    int ReadValue;
+    int Pin;
   public:
-    void SetHight(int hight) {  //number of pixels/0 means nothing
-      Hight = hight;
-    }
-    void Tick() {               //
-      if (Available) {
-        if (Px > 0) {
-          Px--;
-        } else {
-          Available = 0;
+    bool CButton() {
+      ReadValue = analogRead(Pin);
+      if (Reverse) ReadValue = 1023 - ReadValue;
+      if (buttonFlag && ReadValue < 30) {
+        buttonFlag = 0;
+        return 1;
+      } else {
+        if (ReadValue > 10) {
+          buttonFlag = 1;
         }
+        return 0;
       }
     }
-    void StillTick() {          //
-      if (Available) {
-        Show();
-      }
-    }
-    void MakeAvailable() {      //available means on screen
-      Available = 1;
-      Px = 7;
-    }
-    bool IsAvailable() {        //
-      return Available;
-    }
-    Mover() {                   //
-      Available = 0;
-      Px = 7;
+    Button(int pin, bool reverse) {
+      Pin = pin;
+      Reverse = reverse;
     }
 };
-class Dino {
-    void Show() {
-      Matrix[7 - DinoJPat[dinoFrame]][1] = 1;
-      Matrix[6 - DinoJPat[dinoFrame]][1] = 1;
-      if (HitboxMatrix[7 - DinoJPat[dinoFrame]][1] == 1 || HitboxMatrix[6 - DinoJPat[dinoFrame]][1] == 1) {
-        DinoAlive = 0;
-      }
-    }
+class Block {
+  private:
+    //bool TempMatrix[8][8];// for matrix falling when deleting rows
+    bool TempBlockMap[4][4]; //for spinning
+    bool BlockMap[4][4];
+    unsigned short Px = 2;
+    unsigned short Py = -1;
   public:
-    //wich frame of the jump the dino is in
-    int dinoFrame;
-    bool DinoAlive;
-    void Tick() {
-      Show();
-      if (dinoFrame < 8)  {
-        dinoFrame++;
-        if(dinoFrame < 7 && dinoFrame > 1 && digitalRead(A4) == LOW)dinoFrame = 7;
-      } 
+    void VerifyLose() {
+      for (int i = 1; i < 9; i++)if (StillMatrix[2][i])Lost = 1;
     }
-    void Jump() {
-      dinoFrame = 0;
-      Show();
-      // dinoFrame++;
+    void RowChecking() {
+      for (int i = 0; i < 8; i++) {
+          for (int j = 0; j < 8; j++)if (StillMatrix[9 - i][j + 1] == 0) j = 8; else if (j == 7) {
+            for (int l = 0; l < 8; l++)StillMatrix[9 - i][l + 1] = 0;
+            for (int m = i + 1; m < 9; m++)for (int n = 0; n < 9; n++)StillMatrix[10 - m][n] = StillMatrix[9 - m][n];
+            i = -1;
+          }
+      }
     }
-    void StillTick() {
-      Show();
+
+
+    void VerifyBlock() { //verify if should be killed
+      if (Py >= 0) {   //avoid spawnkill
+        for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1)if (StillMatrix[Py + i + 3][Px + j + 1] == 1) {
+                for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1) StillMatrix[i + Py + 2][j + Px + 1] = 1;
+                Px = 2;
+                Py = -1;
+                VerifyLose();
+                SetBlockMap(blockmapout[random(7)]);
+              }
+        RowChecking();
+        VerifyLose();
+      }
     }
-    Dino() {
-      dinoFrame = 8;
-      DinoAlive = 1;
+    void SetBlockMap(bool blockMap[4][4]) {
+      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)BlockMap[i][j] = blockMap[i][j];
+    }
+    void FallShow() {
+      int l = Py;
+      while (l < 8) {
+        for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1)if (StillMatrix[l + i + 3][Px + j + 1] == 1) {
+                VerifyBlock();
+                return;
+              }
+        l++;
+        Py = l;
+      }
+    }
+    void LeftShow() {
+      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1)if (StillMatrix[Py + i + 2][Px + j] == 1)return; Px--;
+    }
+    void RightShow() {
+      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1)if (StillMatrix[Py + i + 2][Px + j + 2] == 1)return; Px++;
+    }
+    void SpinShow() {
+      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)TempBlockMap[i][j] = BlockMap[i][j];
+      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)BlockMap[i][j] = TempBlockMap[j][3 - i];
+    }
+    void StillShow() {
+      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1) Matrix[i + Py][j + Px] = 1;
+      for (int i = 0; i < 8; i++)for (int j = 0; j < 8; j++)if (StillMatrix[i + 2][j + 1] == 1) Matrix[i][j] = 1;
+    }
+    void GShow() {
+      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)if (BlockMap[i][j] == 1)if (StillMatrix[Py + i + 3][Px + j + 1] == 1) {
+              VerifyBlock();
+              return;
+            }
+      Py++;
+    }
+
+    Block(bool blockMap[4][4]) {
+      for (int i = 0; i < 4; i++)for (int j = 0; j < 4; j++)BlockMap[i][j] = blockMap[i][j];
     }
 };
-Dino dino;
-Mover mover[3];
-//check button with cooldown
-bool Cbutton() {
-  static unsigned short buttonFlag = 9;
-  if(dino.dinoFrame == 8 && buttonFlag < 8)buttonFlag = 9;
-  if (digitalRead(A4) == HIGH && buttonFlag >= 8) {
-    buttonFlag = 0;
-    return 1;
-  } else if (buttonFlag < 8) {
-    buttonFlag++;
-  }
-  return 0;
-}
-void setup() {//_______________________setup()_______________________
-  randomSeed(76786);
-  Serial.begin(9600);
-  mover[0].SetHight(2);
-  mover[1].SetHight(3);
-  mover[2].SetHight(4);
-  MoverFrameLength = 40; //Mover frame length(how many frames in one Mover frame for all movers)
-  DinoFrameLength = 14; //dino frame length(how many frames in one dino frame)
-  pause = 1000; //frame length in micros
+Button UpStick(18, 1);
+Button DownStick(18, 0);
+Button RightStick(19, 1);
+Button LeftStick(19, 0);
+Block block(blockmapout[1]);
+void setup() {
+  randomSeed(56);
+  Lost = 0;
+  FrameFlag = 0;
+  pinMode(1, INPUT);
   pinMode(A4, INPUT);
+  pinMode(A5, INPUT);
   pinMode(R1, OUTPUT);
   pinMode(R2, OUTPUT);
   pinMode(R3, OUTPUT);
@@ -209,74 +270,59 @@ void Set_LED_in_Active_Row(int column, int state) {
   if (column == 7) digitalWrite(C7, !state);
   if (column == 8) digitalWrite(C8, !state);
 }
-
+//    3
+//  2    1
+//    4
+//functions
+void MoveBlock(bool frame) {
+  if (frame)block.GShow();
+  if (RightStick.CButton()) {
+    block.RightShow();
+  } else if (LeftStick.CButton()) {
+    block.LeftShow();
+  } else if (UpStick.CButton()) {
+    block.SpinShow();
+    Serial.println("spin");
+  } else if (DownStick.CButton()) {
+    block.FallShow();
+  }
+  block.StillShow();
+}
 void loop() {
-  const static int EndScreen [8] [8] = {//for what is showed on the screen (pixels)
-  {0, 0, 0, 0, 1, 1, 1, 0},
-  {0, 0, 0, 1, 0, 1, 1, 1},
-  {0, 0, 0, 1, 1, 1, 1, 1},
-  {1, 0, 1, 1, 1, 1, 0, 0},
-  {1, 1, 1, 1, 1, 1, 0, 0},
-  {0, 1, 1, 1, 1, 0, 0, 0},
-  {0, 0, 1, 0, 1, 0, 0, 0},
-  {0, 0, 1, 0, 0, 1, 0, 0},};
-  static float MFLfloat = 40;//to store speed's original value
-  static unsigned short S = 10;//spawn speed increases when decreasing this
-  static unsigned short T = 0;//to swtch between frames
-  static unsigned short t = random(100);//for tests(seperating movers)
-  static unsigned short ii = 0;//for dino controller
-  static unsigned short jj = 0;//for mover controller
-  clear();
-  if(dino.DinoAlive){
-  if (jj < MoverFrameLength) { //controls in what frames the Mover moves (mover controller)
-    for (int i = 0; i < 3; i++)mover[i].StillTick(); //for loop to loop all objects in object array
-    jj++;
-  } else {
-    for (int i = 0; i < 3; i++)mover[i].Tick();
-    jj = 0;
-    ////////////////////////////////////////////
-    ////////////////////////////////////////////
-    if (dino.DinoAlive) {
-      Serial.println("alive");
+  static float FFLFloat = 100;  //frame flag limit float
+  static int lostBlinkDuration = 2000;
+  static int lostBlinkFlag = 0;
+  if (!Lost) {
+    Clear();
+    if (FrameFlag < FrameFlagLimit) {
+      FrameFlag++;
+      //__________________________________________________still shows__________________________________________________
+      MoveBlock(0);
     } else {
-      Serial.println("dead");
+      FrameFlag = 0;
+      //frame show
+      MoveBlock(1);
+      FFLFloat = FFLFloat - pow(FFLFloat, 2) / 250;
+      FrameFlagLimit = 15 + round(FFLFloat);
+      //frame show
     }
-    ////////////////////////////////////////////
-    ////////////////////////////////////////////
-  }
-  if (ii < DinoFrameLength) { //controls in what frames the dino moves or starts the jump animation (dino controller)
-    dino.StillTick();
-    ii++;
-  } else {
-    if (Cbutton()) {
-      dino.Jump();
-    } else {
-      dino.Tick();
-    }
-    ii = 0;
-  }
-  ////////////
-  t++;
-  if (t > S) {                                  //spawning movers stuff
-    if (random(10) == 1) {
-      if (!mover[T].IsAvailable()) {  //available means on screen
-        mover[T].MakeAvailable();
-        mover[T].SetHight(random(1, 4));
+  } else { //Lost
+    FFLFloat = 100;
+    FrameFlagLimit = 100;
+    for (int i = 0; i < 8; i++)for (int j = 0; j < 8; j++) {
+        if (lostBlinkFlag < lostBlinkDuration / 2) {
+          Matrix[i][j] = LostMatrix[i][j];
+          lostBlinkFlag++;
+        } else {
+          Matrix[i][j] = !LostMatrix[i][j];
+          lostBlinkFlag++;
+        }
+        if (lostBlinkFlag > lostBlinkDuration - 1)lostBlinkFlag = 0;
+        StillMatrix[i + 2][j + 1] = 0;
       }
-    }
-    t = 0;
-    T++;
-    if (T > 2)T = 0;
-    S = MoverFrameLength / 4;
-    MFLfloat = MFLfloat - pow(MFLfloat, 2) / 50000;
-    MoverFrameLength = 2 + round(MFLfloat);
+    if (DownStick.CButton())Lost = 0;
   }
-  }else{
-    for(int i=0;i<8;i++)for(int j = 0;j<8;j++)Matrix[i][j] = EndScreen[i][j];
-    //if(Cbutton())dino.DinoAlive = 1;
-  }
-
-  for (int j = 0; j < 8; j++) {                   //stuff for showing pixels
+  for (int j = 0; j < 8; j++) {//stuff for showing
     SelectRow(j + 1);
     for (int i = 0; i < 8; i++) {
       Set_LED_in_Active_Row(i + 1 , Matrix[j][i]);
